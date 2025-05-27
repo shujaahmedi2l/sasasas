@@ -1,0 +1,17 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: "test-fpt"
+  description: "this coudl any descriptipn"
+  annotations:
+    github.com/project-slug: "shujaahmedi2l/test-fpt"
+    argocd/app-name: "test-fpt"
+    backstage.io/techdocs-ref: dir:.
+  links:
+    - url: https://test-fpt.onexidp.com
+      title: Web Application
+      icon: LaunchIcon
+spec:
+  type: service
+  owner: guests
+  lifecycle: experimental

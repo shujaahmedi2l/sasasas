@@ -1,0 +1,61 @@
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - group: $(VARIABLE_GROUP)
+
+jobs:
+- job: node_project
+  displayName: 'Build Docker Image'
+  steps:
+  - checkout: self
+
+  - script: |
+      cp argo-ci-cd/$(ARGO_CI_CD_YAML_NAME) /tmp/$(ARGO_CI_CD_YAML_NAME)
+      cp ecr/$(ECR_YAML_NAME) /tmp/$(ECR_YAML_NAME)
+      cp rds/$(RDS_YAML_NAME) /tmp/$(RDS_YAML_NAME)
+      cd /tmp
+      git clone https://$(REPO_TOKEN)@github.com/robotfree/onexidp-gitops.git main
+      echo "Git: just cloned the onexidp-gitops.git repo"
+      cp /tmp/$(ARGO_CI_CD_YAML_NAME) /tmp/main/onexidp/apps/$(ARGO_CI_CD_YAML_NAME)
+      cp /tmp/$(ECR_YAML_NAME) /tmp/main/aws-resources/$(ECR_YAML_NAME)
+      cp /tmp/$(RDS_YAML_NAME) /tmp/main/aws-resources/$(RDS_YAML_NAME)
+      cd main
+      git config --global user.email "actions@github.com"
+      git config --global user.name "GitHub"
+      echo "Git: adding the values.yaml file"
+      git add .
+      git commit -m "Updating apps/$(ARGO_CI_CD_YAML_NAME) file" || echo "Nothing to commit"
+      git push https://$(REPO_TOKEN)@github.com/robotfree/onexidp-gitops.git main
+    displayName: 'Update OneX IDP GitOps'
+
+  - task: Docker@2
+    inputs:
+      command: build
+      repository: $(AWS_ECR_IMAGE_URI)
+      buildContext: '$(System.DefaultWorkingDirectory)'
+      dockerfile: '$(System.DefaultWorkingDirectory)/Dockerfile'   
+    displayName: 'Build docker image'
+
+  - task: ECRPushImage@1
+    inputs:
+      awsCredentials: 'AWS_SERVICE'
+      regionName: $(AWS_REGION)
+      imageSource: 'imagename'
+      sourceImageName: $(AWS_ECR_IMAGE_URI)
+      sourceImageTag: $(Build.BuildId)
+      pushTag: $(Build.BuildId)
+      repositoryName: $(AWS_ECR_REPOSITORY_NAME)
+    displayName: 'Push to Amazon ECR'
+
+  - script: |
+      sed -i 's|tag:.*|tag: $(Build.SourceVersion)|' helm/values.yaml
+      git config --global user.name 'GitHub Actions'
+      git config --global user.email 'actions@github.com'
+      git add helm/values.yaml
+      git commit -m "Update values.yaml"
+      git push
+    displayName: 'Updating version number'
