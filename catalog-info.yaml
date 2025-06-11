@@ -4,7 +4,7 @@ metadata:
   name: "test-fpt"
   description: "this coudl any descriptipn"
   annotations:
-    github.com/project-slug: "shujaahmedi2l/test-fpt"
+    github.com/project-slug: "shujaahmedi2l/sasasas"
     argocd/app-name: "test-fpt"
     backstage.io/techdocs-ref: dir:.
   links:
